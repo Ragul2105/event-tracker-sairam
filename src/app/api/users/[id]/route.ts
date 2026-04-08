@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const parsed = updateUserSchema.safeParse(body);
     
     if (!parsed.success) {
-      return errorResponse(parsed.error.errors[0].message, 400);
+      return errorResponse(parsed.error.issues[0].message, 400);
     }
     
     const updatedUser = await userService.updateUser(id, parsed.data);

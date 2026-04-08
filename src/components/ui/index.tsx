@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger" | "ghost";
+  variant?: "primary" | "secondary" | "danger" | "ghost" | "outline" | "default";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 }
@@ -22,6 +22,8 @@ export function Button({
     secondary: "bg-slate-200 text-gray-900 hover:bg-slate-300 focus:ring-slate-500",
     danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
     ghost: "text-gray-700 hover:bg-slate-100 focus:ring-slate-500",
+    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-gray-500",
+    default: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
   };
   
   const sizes = {
@@ -134,11 +136,12 @@ export function Textarea({ label, error, className = "", ...props }: TextareaPro
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function Card({ children, className = "" }: CardProps) {
+export function Card({ children, className = "", style }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
+    <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`} style={style}>
       {children}
     </div>
   );

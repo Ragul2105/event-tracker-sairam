@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiResponse, PaginatedResponse } from "./types";
+import { ApiResponse, PaginatedResponse } from "../types";
 
 export function successResponse<T>(data: T, message?: string): NextResponse<ApiResponse<T>> {
   return NextResponse.json({

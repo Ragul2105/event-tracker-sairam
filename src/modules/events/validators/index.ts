@@ -33,7 +33,7 @@ export const updateEventSchema = createEventSchema.partial();
 
 export const eventFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(1000).default(20),
   unitId: z.string().optional(),
   year: z.coerce.number().int().optional(),
   status: z.nativeEnum(EventStatus).optional(),

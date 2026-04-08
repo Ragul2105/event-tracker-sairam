@@ -38,7 +38,7 @@ interface Event {
 type SortField = keyof Event | 'sdgGoal';
 type SortOrder = 'asc' | 'desc';
 
-export default function InnovationEcosystemPage() {
+export default function HouseholdSurveyPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function InnovationEcosystemPage() {
     try {
       const unitsRes = await fetch('/api/masters/units');
       const unitsData = await unitsRes.json();
-      const unit = unitsData.data?.find((u: any) => u.code === 'INNOVATION_ECOSYSTEM');
+      const unit = unitsData.data?.find((u: any) => u.code === 'HOUSEHOLD_SURVEY_SIRD');
       
       const params = new URLSearchParams();
       params.append("page", "1");
@@ -399,8 +399,8 @@ export default function InnovationEcosystemPage() {
 
   async function handleDownloadTemplate() {
     const link = document.createElement("a");
-    link.href = "/innovation-ecosystem-template.xlsx";
-    link.download = "innovation-ecosystem-template.xlsx";
+    link.href = "/household-survey-template.xlsx";
+    link.download = "household-survey-template.xlsx";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -417,7 +417,7 @@ export default function InnovationEcosystemPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const res = await fetch("/api/unit-events/innovation-ecosystem/import", {
+      const res = await fetch("/api/unit-events/household-survey/import", {
         method: "POST",
         body: formData,
       });
@@ -454,7 +454,7 @@ export default function InnovationEcosystemPage() {
         <div className="p-3 space-y-2">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Innovation Ecosystem Events</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Household Survey & SIRD Events</h1>
             <div className="flex gap-2">
               <Button onClick={handleDownloadTemplate} variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 text-xs">
                 <Download className="h-3.5 w-3.5" />

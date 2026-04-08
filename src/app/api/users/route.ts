@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const parsed = createUserSchema.safeParse(body);
     
     if (!parsed.success) {
-      return errorResponse(parsed.error.errors[0].message, 400);
+      return errorResponse(parsed.error.issues[0].message, 400);
     }
     
     const newUser = await userService.createUser(parsed.data);
