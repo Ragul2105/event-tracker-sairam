@@ -1,0 +1,238 @@
+// Event Tracker - Prisma Schema
+// Sri Sairam Institutions
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============== USER & AUTH ==============
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdEvents Event[]          @relation("EventCreatedBy")
+  updatedEvents Event[]          @relation("EventUpdatedBy")
+  importBatches ImportBatch[]
+  unitAccesses  UserUnitAccess[]
+  authSessions  AuthSession[]
+
+  @@map("users")
+}
+
+model UserUnitAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  unitId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, unitId])
+  @@map("user_unit_accesses")
+}
+
+model AuthSession {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  expiresAt        DateTime
+  lastUsedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+// ============== MASTER DATA ==============
+
+model Unit {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events       Event[]
+  metrics      ProgramYearMetric[]
+  userAccesses UserUnitAccess[]
+
+  @@map("units")
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events Event[]
+
+  @@map("departments")
+}
+
+model SDGGoal {
+  id         String  @id @default(cuid())
+  goalNumber Int     @unique
+  name       String
+  shortLabel String?
+
+  events EventGoal[]
+
+  @@map("sdg_goals")
+}
+
+// ============== EVENT ==============
+
+model Event {
+  id                String      @id @default(cuid())
+  eventCode         String      @unique
+  title             String
+  description       String?
+  unitId            String
+  departmentId      String?
+  eventDate         DateTime?
+  startDate         DateTime?
+  endDate           DateTime?
+  year              Int?
+  activityType      String?
+  mode              EventMode   @default(OFFLINE)
+  status            EventStatus @default(DRAFT)
+  studentCount      Int         @default(0)
+  facultyCount      Int         @default(0)
+  externalCount     Int         @default(0)
+  totalParticipants Int         @default(0)
+  beneficiaryText   String?
+  beneficiaryCount  Int?
+  hoursPerEvent     Decimal?    @db.Decimal(10, 2)
+  totalHoursEngaged Decimal?    @db.Decimal(10, 2)
+  amountSpent       Decimal?    @db.Decimal(12, 2)
+  locationText      String?
+  reportUrl         String?
+  socialUrl         String?
+  sourceSheet       String?
+  sourceRowNumber   Int?
+  createdById       String
+  updatedById       String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  unit       Unit        @relation(fields: [unitId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  createdBy  User        @relation("EventCreatedBy", fields: [createdById], references: [id])
+  updatedBy  User?       @relation("EventUpdatedBy", fields: [updatedById], references: [id])
+  goals      EventGoal[]
+
+  @@index([unitId])
+  @@index([year])
+  @@index([status])
+  @@map("events")
+}
+
+model EventGoal {
+  id        String  @id @default(cuid())
+  eventId   String
+  sdgGoalId String
+  isPrimary Boolean @default(false)
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sdgGoal SDGGoal @relation(fields: [sdgGoalId], references: [id])
+
+  @@unique([eventId, sdgGoalId])
+  @@map("event_goals")
+}
+
+// ============== IMPORT ==============
+
+model ImportBatch {
+  id           String       @id @default(cuid())
+  fileName     String
+  status       ImportStatus @default(PENDING)
+  totalRows    Int          @default(0)
+  successRows  Int          @default(0)
+  failedRows   Int          @default(0)
+  notes        String?
+  uploadedById String
+  createdAt    DateTime     @default(now())
+
+  uploadedBy User             @relation(fields: [uploadedById], references: [id])
+  rowErrors  ImportRowError[]
+
+  @@map("import_batches")
+}
+
+model ImportRowError {
+  id           String @id @default(cuid())
+  batchId      String
+  sheetName    String
+  rowNumber    Int
+  rawPayload   Json
+  errorMessage String
+
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("import_row_errors")
+}
+
+// ============== METRICS ==============
+
+model ProgramYearMetric {
+  id          String   @id @default(cuid())
+  unitId      String
+  year        Int
+  metricType  String
+  valueNumber Decimal  @db.Decimal(12, 2)
+  metaJson    Json?
+  sourceSheet String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@unique([unitId, year, metricType])
+  @@map("program_year_metrics")
+}
+
+// ============== ENUMS ==============
+
+enum UserRole {
+  ADMIN
+  MASTER
+  UNIT_USER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EventMode {
+  OFFLINE
+  ONLINE
+  HYBRID
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  PARTIAL_SUCCESS
+  FAILED
+}
