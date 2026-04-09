@@ -8,6 +8,8 @@ import {
   Input,
   Select,
   LoadingSpinner,
+  Alert,
+  ProgressBar,
 } from "@/components/ui";
 import { Download, Upload, Search, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronDown, ChevronUp, LayoutGrid, AlignJustify } from "lucide-react";
 import { format } from "date-fns";
@@ -69,6 +71,15 @@ export default function HouseholdSurveyPage() {
   // Modal
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importProgress, setImportProgress] = useState(0);
+
+  // Alert state
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    type: "success" | "error" | "info" | "warning";
+    title: string;
+    message?: string;
+  }>({ show: false, type: "info", title: "" });
 
   useEffect(() => {
     fetchEvents();
@@ -164,7 +175,7 @@ export default function HouseholdSurveyPage() {
       setEditValue('');
     } catch (error) {
       console.error('Failed to save cell:', error);
-      alert('Failed to save changes. Please try again.');
+      showAlert("error", "Save Failed", "Failed to save changes. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -384,17 +395,25 @@ export default function HouseholdSurveyPage() {
     }
 
     const cellClasses = `cursor-pointer hover:bg-blue-50 ${className}`;
-    const scrollableClasses = maxWidth ? `cell-scroll max-w-[${maxWidth}] overflow-x-auto` : '';
+    const scrollableClasses = maxWidth ? "cell-scroll overflow-x-auto" : "";
 
     return (
       <div 
         className={`${cellClasses} ${scrollableClasses}`}
+        style={maxWidth ? { maxWidth } : undefined}
         onClick={() => handleCellClick(eventId, field, value)}
         title={typeof value === 'string' || typeof value === 'number' ? value?.toString() : ''}
       >
         {getDisplayValue()}
       </div>
     );
+  };
+
+  const showAlert = (type: "success" | "error" | "info" | "warning", title: string, message?: string) => {
+    setAlert({ show: true, type, title, message });
+    setTimeout(() => {
+      setAlert({ show: false, type: "info", title: "" });
+    }, 5000);
   };
 
   async function handleDownloadTemplate() {
@@ -408,32 +427,47 @@ export default function HouseholdSurveyPage() {
 
   async function handleImport() {
     if (!selectedFile) {
-      alert("Please select a file");
+      showAlert("warning", "No file selected", "Please select an Excel file to import");
       return;
     }
 
     setUploading(true);
+    setImportProgress(0);
     try {
+      setImportProgress(10);
+
       const formData = new FormData();
       formData.append("file", selectedFile);
+
+      setImportProgress(30);
 
       const res = await fetch("/api/unit-events/household-survey/import", {
         method: "POST",
         body: formData,
       });
 
+      setImportProgress(70);
+
       const data = await res.json();
+      setImportProgress(100);
       
       if (data.success) {
-        alert(`Import successful! ${data.imported} events imported.`);
+        showAlert(
+          "success",
+          "Import Successful!",
+          `Successfully imported ${data.imported} event${data.imported !== 1 ? 's' : ''} to Household Survey & SIRD.`
+        );
         setShowImportModal(false);
         setSelectedFile(null);
+        setImportProgress(0);
         fetchEvents();
       } else {
-        alert(`Import failed: ${data.error || "Unknown error"}`);
+        showAlert("error", "Import Failed", data.error || "Unknown error occurred");
+        setImportProgress(0);
       }
     } catch (error) {
-      alert(`Import failed: ${error instanceof Error ? error.message : "Please try again"}`);
+      showAlert("error", "Import Failed", error instanceof Error ? error.message : "Please try again");
+      setImportProgress(0);
     } finally {
       setUploading(false);
     }
@@ -449,6 +483,15 @@ export default function HouseholdSurveyPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-1.5rem)] overflow-hidden">
+      {alert.show && (
+        <Alert
+          type={alert.type}
+          title={alert.title}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, type: "info", title: "" })}
+        />
+      )}
+
       {/* Sticky Top Section */}
       <div className="flex-shrink-0 bg-gray-50 border-b border-gray-200">
         <div className="p-3 space-y-2">
@@ -896,19 +939,33 @@ export default function HouseholdSurveyPage() {
                   Upload the Excel file with event data
                 </p>
               </div>
+
+              {uploading && (
+                <div className="mt-4">
+                  <ProgressBar
+                    progress={importProgress}
+                    label="Importing events..."
+                    showPercentage={true}
+                  />
+                </div>
+              )}
+
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowImportModal(false);
                     setSelectedFile(null);
+                    setImportProgress(0);
                   }}
+                  disabled={uploading}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleImport}
                   disabled={!selectedFile || uploading}
+                  loading={uploading}
                 >
                   {uploading ? "Uploading..." : "Upload"}
                 </Button>

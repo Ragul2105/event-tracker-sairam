@@ -313,3 +313,19 @@ input:disabled, select:disabled, textarea:disabled {
   border-radius: 6px;
   padding: 12px;
 }
+
+/* Custom Alert Animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Card, CardContent, CardHeader, Button, Badge, Table, Thead, Tbody, Th, Td, LoadingSpinner, EmptyState } from "@/components/ui";
+import { Card, CardContent, CardHeader, Button, Badge, Table, Thead, Tbody, Th, Td, LoadingSpinner, EmptyState, ProgressBar } from "@/components/ui";
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -16,10 +16,14 @@ interface ImportBatch {
   uploadedBy: { name: string };
 }
 
+type UploadStatus = "idle" | "uploading" | "processing" | "completed";
+
 export default function ImportsPage() {
   const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [uploadResult, setUploadResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,27 +38,82 @@ export default function ImportsPage() {
     setLoading(false);
   }
 
+  function uploadImportFile(file: File): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+
+      formData.append("file", file);
+      xhr.open("POST", "/api/imports");
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        // Keep real transfer progress in the first 70%, then reserve 30% for server-side processing.
+        const transferProgress = (event.loaded / event.total) * 70;
+        setUploadProgress((current) => Math.max(current, Math.min(70, transferProgress)));
+      };
+
+      xhr.upload.onload = () => {
+        setUploadStatus("processing");
+        setUploadProgress((current) => Math.max(current, 70));
+      };
+
+      xhr.onerror = () => {
+        reject(new Error("Upload failed"));
+      };
+
+      xhr.onload = () => {
+        try {
+          const parsed = JSON.parse(xhr.responseText || "{}");
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(parsed);
+            return;
+          }
+
+          reject(new Error(parsed.error || "Upload failed"));
+        } catch {
+          reject(new Error("Invalid response from server"));
+        }
+      };
+
+      xhr.send(formData);
+    });
+  }
+
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress(5);
+    setUploadStatus("uploading");
     setUploadResult(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    const processingTicker = window.setInterval(() => {
+      setUploadProgress((current) => {
+        if (current < 70) return current;
+        if (current >= 95) return current;
+        return current + 2;
+      });
+    }, 350);
 
     try {
-      const res = await fetch("/api/imports", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
+      const data = await uploadImportFile(file);
+      setUploadProgress((current) => Math.max(current, 85));
       setUploadResult(data);
-      if (data.success) fetchBatches();
+      if (data.success) {
+        setUploadStatus("completed");
+        setUploadProgress(100);
+        fetchBatches();
+      }
     } catch (error) {
-      setUploadResult({ success: false, error: "Upload failed" });
+      setUploadResult({
+        success: false,
+        error: error instanceof Error ? error.message : "Upload failed",
+      });
     } finally {
+      window.clearInterval(processingTicker);
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -104,10 +163,23 @@ export default function ImportsPage() {
             <Button
               onClick={() => fileInputRef.current?.click()}
               loading={uploading}
+              disabled={uploading}
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
-              {uploading ? "Uploading..." : "Select File"}
+              {uploading
+                ? uploadStatus === "uploading"
+                  ? "Uploading..."
+                  : "Processing..."
+                : "Select File"}
             </Button>
+            {uploading && (
+              <div className="mt-4 max-w-md mx-auto text-left">
+                <ProgressBar
+                  progress={uploadProgress}
+                  label={uploadStatus === "uploading" ? "Uploading file" : "Importing and validating rows"}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

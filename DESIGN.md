@@ -571,7 +571,7 @@ Located in `/app/globals.css`:
 
 ### Progress Bars
 
-#### Standard Progress (.progress-bar + .progress-fill)
+#### Standard Progress (.progress-bar + .progress-fi\ll)
 - **Width**: 100%
 - **Height**: 6px
 - **Background**: #e5e7eb
