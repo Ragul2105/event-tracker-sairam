@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, Badge, Table, Thead, Tbody, Th, Td, LoadingSpinner } from "@/components/ui";
 
-interface Unit { id: string; code: string; name: string; description: string | null; isActive: boolean; }
+interface Unit { id: string; code: string; name: string; isActive: boolean; }
 interface SDGGoal { id: string; goalNumber: number; name: string; shortLabel: string | null; }
 
 export default function MastersPage() {

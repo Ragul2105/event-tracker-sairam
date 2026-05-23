@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma/client";
-import { Prisma, Event, EventStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { EventFiltersInput } from "../validators";
 
 export interface CreateEventData {
@@ -7,14 +7,9 @@ export interface CreateEventData {
   title: string;
   description?: string;
   unitId: string;
-  departmentId?: string;
   eventDate?: Date;
-  startDate?: Date;
-  endDate?: Date;
   year?: number;
   activityType?: string;
-  mode?: "OFFLINE" | "ONLINE" | "HYBRID";
-  status?: EventStatus;
   studentCount?: number;
   facultyCount?: number;
   externalCount?: number;
@@ -34,9 +29,6 @@ export interface CreateEventData {
 
 const eventWithRelations = {
   unit: {
-    select: { id: true, code: true, name: true },
-  },
-  department: {
     select: { id: true, code: true, name: true },
   },
   goals: {
@@ -69,10 +61,6 @@ export async function findEvents(
   
   if (filters.year) {
     where.year = filters.year;
-  }
-  
-  if (filters.status) {
-    where.status = filters.status;
   }
   
   if (filters.activityType) {
@@ -251,5 +239,66 @@ export async function getEventsByYear(unitIds?: string[]) {
     where,
     _count: { id: true },
     orderBy: { year: "desc" },
+  });
+}
+
+export async function getEventsByActivityType(unitIds?: string[]) {
+  const where: Prisma.EventWhereInput = {
+    ...(unitIds?.length ? { unitId: { in: unitIds } } : {}),
+    activityType: { not: null },
+  };
+
+  return prisma.event.groupBy({
+    by: ["activityType"],
+    where,
+    _count: { id: true },
+    orderBy: { _count: { id: "desc" } },
+  });
+}
+
+export async function getParticipantsByUnit(unitIds?: string[]) {
+  const where: Prisma.EventWhereInput = unitIds?.length
+    ? { unitId: { in: unitIds } }
+    : {};
+
+  return prisma.event.groupBy({
+    by: ["unitId"],
+    where,
+    _sum: {
+      studentCount: true,
+      facultyCount: true,
+      externalCount: true,
+      totalParticipants: true,
+    },
+  });
+}
+
+export async function getMetricsByYear(unitIds?: string[]) {
+  const where: Prisma.EventWhereInput = {
+    ...(unitIds?.length ? { unitId: { in: unitIds } } : {}),
+    year: { not: null },
+  };
+
+  return prisma.event.groupBy({
+    by: ["year"],
+    where,
+    _sum: {
+      totalParticipants: true,
+      totalHoursEngaged: true,
+      amountSpent: true,
+    },
+    orderBy: { year: "asc" },
+  });
+}
+
+export async function getAmountByUnit(unitIds?: string[]) {
+  const where: Prisma.EventWhereInput = unitIds?.length
+    ? { unitId: { in: unitIds } }
+    : {};
+
+  return prisma.event.groupBy({
+    by: ["unitId"],
+    where,
+    _sum: { amountSpent: true, totalHoursEngaged: true },
   });
 }

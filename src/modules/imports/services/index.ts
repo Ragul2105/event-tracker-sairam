@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma/client";
-import { ImportStatus, Prisma } from "@prisma/client";
-import { parseExcelBuffer, ParsedWorkbook } from "../parsers/excel";
-import { mapSheet, MappedEventRow, MappedBloodDonationRow } from "../mappers";
+import { ImportStatus } from "@prisma/client";
+import { parseExcelBuffer } from "../parsers/excel";
+import { mapSheet } from "../mappers";
 import * as importRepo from "../repositories";
 import * as eventRepo from "@/modules/events/repositories";
 import * as metricsRepo from "@/modules/metrics/repositories";
@@ -91,7 +91,6 @@ export async function processImport(
             campDonors: row.campDonors,
             regularDonors: row.regularDonors,
             totalDonors: row.campDonors + row.regularDonors,
-            sourceSheet: row.sourceSheet,
           });
           
           sheetSuccess++;
@@ -140,7 +139,6 @@ export async function processImport(
             eventDate: row.eventDate || undefined,
             year,
             activityType: row.activityType || undefined,
-            status: "PUBLISHED",
             studentCount: row.studentCount || 0,
             facultyCount: row.facultyCount || 0,
             externalCount: row.externalCount || 0,

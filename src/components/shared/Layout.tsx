@@ -6,11 +6,9 @@ import { useAuth } from "./AuthProvider";
 import { 
   LayoutDashboard, 
   Calendar, 
-  Upload, 
   Users, 
   Settings, 
   LogOut,
-  Droplet,
   Menu,
   X,
   ChevronDown,
@@ -46,10 +44,10 @@ const navItems: NavItem[] = [
       { href: "/events/nss", label: "NSS" },
       { href: "/events/uba", label: "UBA" },
       { href: "/events/household-survey", label: "House Hold Survey & SIRD" },
+      { href: "/events/scouts-guides", label: "Scouts & Guides" },
+      { href: "/events/blood-donation", label: "Blood Donation" },
     ]
   },
-  { href: "/imports", label: "Import", icon: Upload, roles: ["ADMIN", "MASTER"] },
-  { href: "/metrics/blood-donation", label: "Blood Donation", icon: Droplet, roles: ["ADMIN", "MASTER"] },
   { href: "/admin/users", label: "Users", icon: Users, roles: ["ADMIN"] },
   { href: "/admin/masters", label: "Masters", icon: Settings, roles: ["ADMIN"] },
 ];

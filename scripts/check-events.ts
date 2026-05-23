@@ -13,7 +13,6 @@ async function main() {
           title: true,
           eventCode: true,
           year: true,
-          status: true,
           unitId: true,
         }
       });

@@ -29,12 +29,12 @@ const SDG_GOALS = [
 ];
 
 const UNITS = [
-  { code: "NSS", name: "National Service Scheme", description: "NSS activities and events" },
-  { code: "UBA", name: "Unnat Bharat Abhiyan", description: "UBA rural development activities" },
-  { code: "SCOUTS_AND_GUIDES", name: "Scouts & Guides", description: "Scout and Guide activities" },
-  { code: "INNOVATION_ECOSYSTEM", name: "Innovation Ecosystem", description: "Innovation and entrepreneurship activities" },
-  { code: "HOUSEHOLD_SURVEY_SIRD", name: "Household Survey & SIRD", description: "SIRD training and household surveys" },
-  { code: "BLOOD_DONATION", name: "Blood Donation", description: "Blood donation drives and metrics" },
+  { code: "NSS", name: "National Service Scheme" },
+  { code: "UBA", name: "Unnat Bharat Abhiyan" },
+  { code: "SCOUTS_AND_GUIDES", name: "Scouts & Guides" },
+  { code: "INNOVATION_ECOSYSTEM", name: "Innovation Ecosystem" },
+  { code: "HOUSEHOLD_SURVEY_SIRD", name: "Household Survey & SIRD" },
+  { code: "BLOOD_DONATION", name: "Blood Donation" },
 ];
 
 async function main() {

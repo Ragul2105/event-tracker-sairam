@@ -22,7 +22,6 @@ export async function updateImportBatch(
     status?: ImportStatus;
     successRows?: number;
     failedRows?: number;
-    notes?: string;
   }
 ) {
   return prisma.importBatch.update({

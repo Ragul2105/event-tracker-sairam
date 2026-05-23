@@ -33,7 +33,26 @@ interface ParsedEventRow {
   socialMediaLink: string;
 }
 
-function parseExcelDate(value: any): Date | null {
+function toCellString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function toCellInt(value: unknown): number {
+  const parsed = parseInt(toCellString(value), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toCellFloat(value: unknown): number {
+  const parsed = parseFloat(toCellString(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+function parseExcelDate(value: unknown): Date | null {
   if (!value) return null;
 
   // If it's already a date object
@@ -129,7 +148,7 @@ export async function POST(
     const workbook = XLSX.read(buffer);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
 
     // Parse data (skip header row - row 0)
     const events: ParsedEventRow[] = [];
@@ -145,24 +164,24 @@ export async function POST(
 
       try {
         const event: ParsedEventRow = {
-          sno: parseInt(row[0]) || 0,
-          sdgGoalNo: row[1]?.toString() || "",
-          date: row[2]?.toString() || "",
-          year: parseInt(row[3]) || new Date().getFullYear(),
-          activityName: row[4]?.toString() || "",
-          typeOfActivity: row[5]?.toString() || "",
-          students: parseInt(row[6]) || 0,
-          faculty: parseInt(row[7]) || 0,
-          external: parseInt(row[8]) || 0,
-          total: parseInt(row[9]) || 0,
-          location: row[10]?.toString() || "",
-          hoursPerPerson: parseFloat(row[11]) || 0,
-          totalHours: parseFloat(row[12]) || 0,
-          amountSpent: parseFloat(row[13]) || 0,
-          beneficiaries: row[14]?.toString() || "",
-          beneficiariesCount: parseInt(row[15]) || 0,
-          reportLink: row[16]?.toString() || "",
-          socialMediaLink: row[17]?.toString() || "",
+          sno: toCellInt(row[0]),
+          sdgGoalNo: toCellString(row[1]),
+          date: toCellString(row[2]),
+          year: toCellInt(row[3]) || new Date().getFullYear(),
+          activityName: toCellString(row[4]),
+          typeOfActivity: toCellString(row[5]),
+          students: toCellInt(row[6]),
+          faculty: toCellInt(row[7]),
+          external: toCellInt(row[8]),
+          total: toCellInt(row[9]),
+          location: toCellString(row[10]),
+          hoursPerPerson: toCellFloat(row[11]),
+          totalHours: toCellFloat(row[12]),
+          amountSpent: toCellFloat(row[13]),
+          beneficiaries: toCellString(row[14]),
+          beneficiariesCount: toCellInt(row[15]),
+          reportLink: toCellString(row[16]),
+          socialMediaLink: toCellString(row[17]),
         };
 
         console.log(`Parsed row ${i}: ${event.activityName}`);
@@ -211,8 +230,6 @@ export async function POST(
             eventDate,
             year: eventData.year,
             activityType: eventData.typeOfActivity || null,
-            mode: "OFFLINE",
-            status: "PUBLISHED",
             studentCount: eventData.students,
             facultyCount: eventData.faculty,
             externalCount: eventData.external,
@@ -250,9 +267,9 @@ export async function POST(
         }
 
         imported++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(`Error importing event ${eventData.activityName}:`, err);
-        errors.push(`Row ${eventData.sno}: ${err.message}`);
+        errors.push(`Row ${eventData.sno}: ${getErrorMessage(err)}`);
       }
     }
 
@@ -262,10 +279,10 @@ export async function POST(
       total: events.length,
       errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Import error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Import failed" },
+      { success: false, error: getErrorMessage(error) },
       { status: 500 }
     );
   }

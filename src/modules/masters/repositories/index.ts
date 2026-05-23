@@ -22,7 +22,6 @@ export async function findUnitByCode(code: string) {
 export async function createUnit(data: {
   code: string;
   name: string;
-  description?: string;
 }) {
   return prisma.unit.create({
     data,
@@ -34,7 +33,6 @@ export async function updateUnit(
   data: {
     code?: string;
     name?: string;
-    description?: string;
     isActive?: boolean;
   }
 ) {
@@ -59,12 +57,5 @@ export async function findSDGGoalById(id: string) {
 export async function findSDGGoalByNumber(goalNumber: number) {
   return prisma.sDGGoal.findUnique({
     where: { goalNumber },
-  });
-}
-
-export async function findDepartments(includeInactive = false) {
-  return prisma.department.findMany({
-    where: includeInactive ? {} : { isActive: true },
-    orderBy: { name: "asc" },
   });
 }

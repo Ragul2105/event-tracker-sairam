@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
       pageSize: searchParams.get("pageSize") ?? undefined,
       unitId: searchParams.get("unitId") ?? undefined,
       year: searchParams.get("year") ?? undefined,
-      status: searchParams.get("status") ?? undefined,
       sdgGoalId: searchParams.get("sdgGoalId") ?? undefined,
       activityType: searchParams.get("activityType") ?? undefined,
       search: searchParams.get("search") ?? undefined,

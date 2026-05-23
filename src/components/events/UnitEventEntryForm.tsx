@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, Button, Input, Select, Textarea, LoadingSpinner } from "@/components/ui";
-import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Save } from "lucide-react";
+
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Input,
+  LoadingSpinner,
+  Select,
+  Textarea,
+} from "@/components/ui";
 
 interface Unit {
   id: string;
@@ -18,13 +28,20 @@ interface SDGGoal {
   name: string;
 }
 
-export default function NewEventPage() {
+type UnitEventEntryFormProps = {
+  unitCode: string;
+  unitLabel: string;
+  backHref: string;
+};
+
+export default function UnitEventEntryForm({ unitCode, unitLabel, backHref }: UnitEventEntryFormProps) {
   const router = useRouter();
-  const [units, setUnits] = useState<Unit[]>([]);
   const [sdgGoals, setSdgGoals] = useState<SDGGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
+
+  const [unit, setUnit] = useState<Unit | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -51,33 +68,76 @@ export default function NewEventPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const [unitsRes, sdgRes] = await Promise.all([
-        fetch("/api/masters/units"),
-        fetch("/api/masters/sdg-goals"),
-      ]);
-      const unitsData = await unitsRes.json();
-      const sdgData = await sdgRes.json();
-      
-      if (unitsData.success) setUnits(unitsData.data);
-      if (sdgData.success) setSdgGoals(sdgData.data);
-      setLoading(false);
+      setLoading(true);
+      setError("");
+      try {
+        const [unitsRes, sdgRes] = await Promise.all([
+          fetch("/api/masters/units"),
+          fetch("/api/masters/sdg-goals"),
+        ]);
+
+        const unitsData = await unitsRes.json();
+        const sdgData = await sdgRes.json();
+
+        const foundUnit = (unitsData?.data as Unit[] | undefined)?.find((u) => u.code === unitCode) ?? null;
+        setUnit(foundUnit);
+        setFormData((prev) => ({ ...prev, unitId: foundUnit?.id ?? "" }));
+
+        if (sdgData?.success) setSdgGoals(sdgData.data);
+
+        if (!foundUnit) {
+          setError(`Unit not found for code: ${unitCode}`);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load form data");
+      } finally {
+        setLoading(false);
+      }
     }
+
     fetchData();
-  }, []);
+  }, [unitCode]);
+
+  const toggleSdgGoal = (goalId: string) => {
+    const newIds = formData.sdgGoalIds.includes(goalId)
+      ? formData.sdgGoalIds.filter((id) => id !== goalId)
+      : [...formData.sdgGoalIds, goalId];
+
+    setFormData((prev) => ({
+      ...prev,
+      sdgGoalIds: newIds,
+      primarySdgGoalId: newIds.includes(prev.primarySdgGoalId) ? prev.primarySdgGoalId : "",
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!formData.unitId) {
+      setError("Unit is required");
+      return;
+    }
+
     setSaving(true);
 
     try {
+      const studentCount = formData.studentCount ? parseInt(formData.studentCount) : 0;
+      const facultyCount = formData.facultyCount ? parseInt(formData.facultyCount) : 0;
+      const externalCount = formData.externalCount ? parseInt(formData.externalCount) : 0;
+      const computedTotalParticipants = studentCount + facultyCount + externalCount;
+
       const payload = {
         ...formData,
         year: formData.year ? parseInt(formData.year) : undefined,
         studentCount: formData.studentCount ? parseInt(formData.studentCount) : undefined,
         facultyCount: formData.facultyCount ? parseInt(formData.facultyCount) : undefined,
         externalCount: formData.externalCount ? parseInt(formData.externalCount) : undefined,
-        totalParticipants: formData.totalParticipants ? parseInt(formData.totalParticipants) : undefined,
+        totalParticipants: formData.totalParticipants
+          ? parseInt(formData.totalParticipants)
+          : computedTotalParticipants > 0
+            ? computedTotalParticipants
+            : undefined,
         beneficiaryCount: formData.beneficiaryCount ? parseInt(formData.beneficiaryCount) : undefined,
         hoursPerEvent: formData.hoursPerEvent ? parseFloat(formData.hoursPerEvent) : undefined,
         totalHoursEngaged: formData.totalHoursEngaged ? parseFloat(formData.totalHoursEngaged) : undefined,
@@ -92,12 +152,9 @@ export default function NewEventPage() {
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create event");
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create event");
-      }
-
-      router.push(`/events/${data.data.id}`);
+      router.push(backHref);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {
@@ -105,29 +162,28 @@ export default function NewEventPage() {
     }
   };
 
-  const toggleSdgGoal = (goalId: string) => {
-    const newIds = formData.sdgGoalIds.includes(goalId)
-      ? formData.sdgGoalIds.filter((id) => id !== goalId)
-      : [...formData.sdgGoalIds, goalId];
-    
-    setFormData({
-      ...formData,
-      sdgGoalIds: newIds,
-      primarySdgGoalId: newIds.includes(formData.primarySdgGoalId) ? formData.primarySdgGoalId : "",
-    });
-  };
-
-  if (loading) return <LoadingSpinner />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/events">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Create Event</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Link href={backHref}>
+            <Button variant="ghost" size="sm" aria-label="Back">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Create New {unitLabel} Entry</h1>
+            <p className="text-sm text-gray-700">Fill in the details below.</p>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -137,48 +193,46 @@ export default function NewEventPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Basic Information</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">Basic Information</div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input
-              label="Title *"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-            <Textarea
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Unit *"
-                value={formData.unitId}
-                onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
-                options={[
-                  { value: "", label: "Select Unit" },
-                  ...units.map((u) => ({ value: u.id, label: u.name })),
-                ]}
-                required
+              <Input
+                label="Unit"
+                value={unit?.name ?? ""}
+                disabled
               />
               <Input
                 label="Activity Type"
                 value={formData.activityType}
                 onChange={(e) => setFormData({ ...formData, activityType: e.target.value })}
+                placeholder="e.g., Workshop, Awareness Program"
               />
             </div>
+
+            <Input
+              label="Title *"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+              placeholder="Enter event title"
+            />
+
+            <Textarea
+              label="Description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              placeholder="Brief description of the event"
+            />
           </CardContent>
         </Card>
 
-        {/* Date & Location */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Date & Location</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">Event Details</div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -198,15 +252,15 @@ export default function NewEventPage() {
                 label="Location"
                 value={formData.locationText}
                 onChange={(e) => setFormData({ ...formData, locationText: e.target.value })}
+                placeholder="Location"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* SDG Goals */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">SDG Goals</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">SDG Goals</div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2">
@@ -226,6 +280,7 @@ export default function NewEventPage() {
                 </button>
               ))}
             </div>
+
             {formData.sdgGoalIds.length > 1 && (
               <div className="mt-4">
                 <Select
@@ -245,10 +300,9 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
-        {/* Participation */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Participation</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">Participation</div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -280,10 +334,9 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
-        {/* Impact */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Impact</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">Impact</div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -324,10 +377,9 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
-        {/* References */}
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">References</h2>
+            <div className="text-xs font-semibold tracking-wider text-gray-800 uppercase">References</div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -347,14 +399,13 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
-        {/* Submit */}
-        <div className="flex justify-end gap-4">
-          <Link href="/events">
+        <div className="flex justify-end gap-3">
+          <Link href={backHref}>
             <Button variant="secondary">Cancel</Button>
           </Link>
           <Button type="submit" loading={saving}>
             <Save className="h-4 w-4 mr-2" />
-            Create Event
+            Create Entry
           </Button>
         </div>
       </form>

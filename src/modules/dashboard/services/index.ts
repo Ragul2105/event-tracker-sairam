@@ -1,6 +1,104 @@
 import prisma from "@/lib/prisma/client";
 import * as eventRepo from "@/modules/events/repositories";
-import { DashboardSummary } from "@/modules/shared/types";
+import { DashboardSummary, DashboardAnalytics } from "@/modules/shared/types";
+
+export async function getDashboardAnalytics(unitIds?: string[]): Promise<DashboardAnalytics> {
+  const unitMap = new Map(
+    (await prisma.unit.findMany({ select: { id: true, code: true, name: true } }))
+      .map((u) => [u.id, u])
+  );
+
+  const [
+    stats,
+    eventsByUnitRaw,
+    eventsByYearRaw,
+    eventsBySDGRaw,
+    eventsByActivityTypeRaw,
+    participantsByUnitRaw,
+    metricsByYearRaw,
+    bloodDonationRecords,
+  ] = await Promise.all([
+    eventRepo.getEventStats(unitIds),
+    eventRepo.getEventsByUnit(unitIds),
+    eventRepo.getEventsByYear(unitIds),
+    prisma.eventGoal.groupBy({ by: ["sdgGoalId"], _count: { id: true } }),
+    eventRepo.getEventsByActivityType(unitIds),
+    eventRepo.getParticipantsByUnit(unitIds),
+    eventRepo.getMetricsByYear(unitIds),
+    prisma.bloodDonationRecord.findMany({ orderBy: { year: "asc" } }),
+  ]);
+
+  const sdgMap = new Map(
+    (await prisma.sDGGoal.findMany({ select: { id: true, goalNumber: true, name: true } }))
+      .map((s) => [s.id, s])
+  );
+
+  const eventsByUnit = eventsByUnitRaw.map((e) => {
+    const unit = unitMap.get(e.unitId);
+    return { unitCode: unit?.code || "UNKNOWN", unitName: unit?.name || "Unknown", count: e._count.id };
+  });
+
+  const eventsByYear = eventsByYearRaw
+    .filter((e) => e.year !== null)
+    .map((e) => ({ year: e.year!, count: e._count.id }))
+    .sort((a, b) => a.year - b.year);
+
+  const eventsBySDG = eventsBySDGRaw.map((e) => {
+    const sdg = sdgMap.get(e.sdgGoalId);
+    return { goalNumber: sdg?.goalNumber || 0, goalName: sdg?.name || "Unknown", count: e._count.id };
+  }).sort((a, b) => a.goalNumber - b.goalNumber);
+
+  const eventsByActivityType = eventsByActivityTypeRaw
+    .filter((e) => e.activityType)
+    .map((e) => ({ activityType: e.activityType!, count: e._count.id }));
+
+  const participantsByUnit = participantsByUnitRaw.map((e) => {
+    const unit = unitMap.get(e.unitId);
+    return {
+      unitCode: unit?.code || "UNKNOWN",
+      unitName: unit?.name || "Unknown",
+      students: e._sum.studentCount || 0,
+      faculty: e._sum.facultyCount || 0,
+      external: e._sum.externalCount || 0,
+      total: e._sum.totalParticipants || 0,
+    };
+  });
+
+  const metricsByYear = metricsByYearRaw
+    .filter((e) => e.year !== null)
+    .map((e) => ({
+      year: e.year!,
+      participants: e._sum.totalParticipants || 0,
+      hours: e._sum.totalHoursEngaged?.toNumber() || 0,
+      amount: e._sum.amountSpent?.toNumber() || 0,
+    }));
+
+  const latestBloodDonation = bloodDonationRecords[bloodDonationRecords.length - 1];
+
+  return {
+    totalEvents: stats.totalEvents,
+    totalParticipants: stats.totalParticipants,
+    totalBeneficiaries: stats.totalBeneficiaries,
+    totalHoursEngaged: stats.totalHoursEngaged,
+    totalAmountSpent: (await prisma.event.aggregate({
+      where: unitIds?.length ? { unitId: { in: unitIds } } : {},
+      _sum: { amountSpent: true },
+    }))._sum.amountSpent?.toNumber() || 0,
+    latestBloodDonationTotal: latestBloodDonation?.totalDonors || 0,
+    eventsByYear,
+    metricsByYear,
+    eventsByUnit,
+    eventsByActivityType,
+    participantsByUnit,
+    eventsBySDG,
+    bloodDonationHistory: bloodDonationRecords.map((r) => ({
+      year: r.year,
+      campDonors: r.campDonors,
+      regularDonors: r.regularDonors,
+      totalDonors: r.totalDonors,
+    })),
+  };
+}
 
 export async function getDashboardSummary(unitIds?: string[]): Promise<DashboardSummary> {
   // Get event stats

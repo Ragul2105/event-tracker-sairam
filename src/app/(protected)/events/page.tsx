@@ -14,7 +14,6 @@ interface Event {
   eventCode: string;
   title: string;
   year: number | null;
-  status: string;
   totalParticipants: number;
   unit: { code: string; name: string };
   goals: { sdgGoal: { goalNumber: number } }[];
@@ -37,7 +36,6 @@ export default function EventsPage() {
     search: "",
     unitId: "",
     year: "",
-    status: "",
   });
 
   useEffect(() => {
@@ -65,7 +63,6 @@ export default function EventsPage() {
     if (filters.search) params.set("search", filters.search);
     if (filters.unitId) params.set("unitId", filters.unitId);
     if (filters.year) params.set("year", filters.year);
-    if (filters.status) params.set("status", filters.status);
 
     const res = await fetch(`/api/events?${params}`);
     const data = await res.json();
@@ -106,7 +103,7 @@ export default function EventsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
               <Input
@@ -129,16 +126,6 @@ export default function EventsPage() {
               placeholder="Year"
               value={filters.year}
               onChange={(e) => setFilters({ ...filters, year: e.target.value })}
-            />
-            <Select
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              options={[
-                { value: "", label: "All Status" },
-                { value: "DRAFT", label: "Draft" },
-                { value: "PUBLISHED", label: "Published" },
-                { value: "ARCHIVED", label: "Archived" },
-              ]}
             />
           </div>
         </CardContent>
@@ -169,7 +156,6 @@ export default function EventsPage() {
                   <Th>Year</Th>
                   <Th>Participants</Th>
                   <Th>SDG Goals</Th>
-                  <Th>Status</Th>
                   <Th>Actions</Th>
                 </tr>
               </Thead>
@@ -197,16 +183,6 @@ export default function EventsPage() {
                           <span className="text-xs text-gray-700">+{event.goals.length - 3}</span>
                         )}
                       </div>
-                    </Td>
-                    <Td>
-                      <Badge
-                        variant={
-                          event.status === "PUBLISHED" ? "success" :
-                          event.status === "DRAFT" ? "warning" : "default"
-                        }
-                      >
-                        {event.status}
-                      </Badge>
                     </Td>
                     <Td>
                       <div className="flex items-center gap-2">

@@ -20,7 +20,7 @@ export default function EditEventPage() {
 
   const [formData, setFormData] = useState({
     title: "", description: "", unitId: "", eventDate: "", year: "",
-    activityType: "", status: "DRAFT", studentCount: "", facultyCount: "",
+    activityType: "", studentCount: "", facultyCount: "",
     externalCount: "", totalParticipants: "", beneficiaryText: "",
     beneficiaryCount: "", hoursPerEvent: "", totalHoursEngaged: "",
     amountSpent: "", locationText: "", reportUrl: "", socialUrl: "",
@@ -46,7 +46,6 @@ export default function EditEventPage() {
         setFormData({
           title: e.title || "", description: e.description || "",
           unitId: e.unitId || "", activityType: e.activityType || "",
-          status: e.status || "DRAFT",
           eventDate: e.eventDate ? e.eventDate.split("T")[0] : "",
           year: e.year?.toString() || "",
           studentCount: e.studentCount?.toString() || "",
@@ -129,12 +128,10 @@ export default function EditEventPage() {
           <CardContent className="space-y-4">
             <Input label="Title *" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
             <Textarea label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select label="Unit *" value={formData.unitId} onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
                 options={[{ value: "", label: "Select Unit" }, ...units.map((u) => ({ value: u.id, label: u.name }))]} required />
               <Input label="Activity Type" value={formData.activityType} onChange={(e) => setFormData({ ...formData, activityType: e.target.value })} />
-              <Select label="Status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                options={[{ value: "DRAFT", label: "Draft" }, { value: "PUBLISHED", label: "Published" }, { value: "ARCHIVED", label: "Archived" }]} />
             </div>
           </CardContent>
         </Card>

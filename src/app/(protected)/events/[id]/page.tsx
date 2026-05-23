@@ -15,7 +15,6 @@ interface Event {
   eventDate: string | null;
   year: number | null;
   activityType: string | null;
-  status: string;
   studentCount: number;
   facultyCount: number;
   externalCount: number;
@@ -68,17 +67,7 @@ export default function EventDetailPage() {
             </Button>
           </Link>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
-              <Badge
-                variant={
-                  event.status === "PUBLISHED" ? "success" :
-                  event.status === "DRAFT" ? "warning" : "default"
-                }
-              >
-                {event.status}
-              </Badge>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
             <p className="text-gray-700 font-mono">{event.eventCode}</p>
           </div>
         </div>

@@ -181,7 +181,6 @@ Keep the first version aligned with the existing tracker mindset.
 
 ### C. Master Data Module
 - units/programs
-- departments
 - SDG goals
 - activity types
 - locations (optional in v1 as free text)
@@ -319,18 +318,14 @@ This is the base structure that most sheets can map into.
 - `title`
 - `description` (optional)
 - `unitId`
-- `departmentId` (optional initially)
 
 ### Date and time
 - `eventDate`
-- `startDate` (optional)
-- `endDate` (optional)
 - `academicYear` / `calendarYear`
 
 ### Classification
 - `activityType`
 - `audienceType` (optional later)
-- `mode` (`offline`, `online`, `hybrid`) optional in v1
 - `status` (`draft`, `published`, `archived`)
 
 ### Participation counts
@@ -383,7 +378,6 @@ Suggested fields:
 - `id`
 - `userId`
 - `unitId`
-- `createdAt`
 
 ### 13.3 AuthSession
 Optional but recommended for better session control.
@@ -394,7 +388,6 @@ Suggested fields:
 - `userId`
 - `refreshTokenHash`
 - `expiresAt`
-- `lastUsedAt`
 - `createdAt`
 
 ### 13.4 Unit
@@ -412,20 +405,9 @@ Suggested fields:
 - `id`
 - `code`
 - `name`
-- `description`
 - `isActive`
 
-### 13.5 Department
-Needed only if the institution wants department-based access later.
-Can exist in schema from day one even if lightly used.
-
-Suggested fields:
-- `id`
-- `code`
-- `name`
-- `isActive`
-
-### 13.6 SDGGoal
+### 13.5 SDGGoal
 Master table for SDG goals.
 
 Suggested fields:
@@ -434,7 +416,7 @@ Suggested fields:
 - `name`
 - `shortLabel`
 
-### 13.7 EventGoal
+### 13.6 EventGoal
 Join table between events and SDG goals.
 
 Why this is important:
@@ -448,7 +430,7 @@ Suggested fields:
 - `sdgGoalId`
 - `isPrimary`
 
-### 13.8 ImportBatch
+### 13.7 ImportBatch
 Tracks Excel imports.
 
 Suggested fields:
@@ -459,10 +441,9 @@ Suggested fields:
 - `totalRows`
 - `successRows`
 - `failedRows`
-- `notes`
 - `createdAt`
 
-### 13.9 ImportRowError
+### 13.8 ImportRowError
 Stores failed import rows for review.
 
 Suggested fields:
@@ -473,7 +454,7 @@ Suggested fields:
 - `rawPayload`
 - `errorMessage`
 
-### 13.10 ProgramYearMetric
+### 13.9 ProgramYearMetric
 For non-event annual metrics like blood donation summary.
 
 Suggested fields:
@@ -482,8 +463,6 @@ Suggested fields:
 - `year`
 - `metricType`
 - `valueNumber`
-- `metaJson`
-- `sourceSheet`
 
 Example usage for blood donation:
 - camp donors
@@ -530,7 +509,6 @@ model AuthSession {
   userId           String
   refreshTokenHash String
   expiresAt        DateTime
-  lastUsedAt       DateTime?
   createdAt        DateTime @default(now())
 
   user             User     @relation(fields: [userId], references: [id])
@@ -540,21 +518,11 @@ model Unit {
   id          String            @id @default(cuid())
   code        String            @unique
   name        String
-  description String?
   isActive    Boolean           @default(true)
 
   events      Event[]
   metrics     ProgramYearMetric[]
   userAccesses UserUnitAccess[]
-}
-
-model Department {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  isActive  Boolean  @default(true)
-
-  events    Event[]
 }
 
 model Event {
@@ -563,10 +531,7 @@ model Event {
   title                String
   description          String?
   unitId               String
-  departmentId         String?
   eventDate            DateTime?
-  startDate            DateTime?
-  endDate              DateTime?
   year                 Int?
   activityType         String?
   status               EventStatus  @default(DRAFT)
@@ -590,7 +555,6 @@ model Event {
   updatedAt            DateTime     @updatedAt
 
   unit                 Unit         @relation(fields: [unitId], references: [id])
-  department           Department?  @relation(fields: [departmentId], references: [id])
   createdBy            User         @relation("EventCreatedBy", fields: [createdById], references: [id])
   updatedBy            User?        @relation("EventUpdatedBy", fields: [updatedById], references: [id])
   goals                EventGoal[]
@@ -626,7 +590,6 @@ model ImportBatch {
   totalRows    Int           @default(0)
   successRows  Int           @default(0)
   failedRows   Int           @default(0)
-  notes        String?
   uploadedById String
   createdAt    DateTime      @default(now())
 
@@ -651,8 +614,6 @@ model ProgramYearMetric {
   year        Int
   metricType  String
   valueNumber Decimal
-  metaJson    Json?
-  sourceSheet String?
 
   unit        Unit      @relation(fields: [unitId], references: [id])
 }
@@ -827,14 +788,11 @@ The event form in iteration 1 should be simple and stable.
 ### Section A: Basic Info
 - title
 - unit
-- department (optional)
 - activity type
 - status
 
 ### Section B: Date & Location
 - event date
-- start date
-- end date
 - year
 - location
 
@@ -858,7 +816,7 @@ The event form in iteration 1 should be simple and stable.
 ### Section F: References
 - report URL
 - social media URL
-- notes/description
+- description
 
 ---
 
@@ -1215,11 +1173,10 @@ Once the base is stable, these should come next.
 These do not block the skeleton, but should be clarified before implementation gets too far.
 
 1. Should JWT be stored in HTTP-only cookies, or do you want token storage handled another way?
-2. Should department-level restriction exist in v1, or only unit-level restriction?
-3. Should `SCOUTS & GUIDES` school/category-style fields be modeled in v1, or stored temporarily as notes/meta?
-4. Do you want import-first development, or manual CRUD-first development?
-5. Should the first release support edit/delete for imported rows, or keep imported data read-only until validated?
-6. Will attachment upload be postponed fully, or should the schema reserve space for it now?
+2. Should `SCOUTS & GUIDES` school/category-style fields be modeled in v1, or kept outside the core schema until required?
+3. Do you want import-first development, or manual CRUD-first development?
+4. Should the first release support edit/delete for imported rows, or keep imported data read-only until validated?
+5. Will attachment upload be postponed fully, or should the schema reserve space for it now?
 
 ---
 

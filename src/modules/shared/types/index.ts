@@ -1,7 +1,7 @@
-import { UserRole, EventStatus, EventMode, ImportStatus } from "@prisma/client";
+import { UserRole, ImportStatus } from "@prisma/client";
 
 // Re-export Prisma enums
-export { UserRole, EventStatus, EventMode, ImportStatus };
+export { UserRole, ImportStatus };
 
 // API Response types
 export interface ApiResponse<T = unknown> {
@@ -68,14 +68,9 @@ export interface EventDTO {
   title: string;
   description: string | null;
   unitId: string;
-  departmentId: string | null;
   eventDate: Date | null;
-  startDate: Date | null;
-  endDate: Date | null;
   year: number | null;
   activityType: string | null;
-  mode: EventMode;
-  status: EventStatus;
   studentCount: number;
   facultyCount: number;
   externalCount: number;
@@ -100,11 +95,6 @@ export interface EventWithRelations extends EventDTO {
     code: string;
     name: string;
   };
-  department: {
-    id: string;
-    code: string;
-    name: string;
-  } | null;
   goals: {
     id: string;
     sdgGoalId: string;
@@ -125,14 +115,9 @@ export interface CreateEventInput {
   title: string;
   description?: string;
   unitId: string;
-  departmentId?: string;
   eventDate?: Date;
-  startDate?: Date;
-  endDate?: Date;
   year?: number;
   activityType?: string;
-  mode?: EventMode;
-  status?: EventStatus;
   studentCount?: number;
   facultyCount?: number;
   externalCount?: number;
@@ -149,12 +134,11 @@ export interface CreateEventInput {
   primarySdgGoalId?: string;
 }
 
-export interface UpdateEventInput extends Partial<CreateEventInput> {}
+export type UpdateEventInput = Partial<CreateEventInput>;
 
 export interface EventFilters {
   unitId?: string;
   year?: number;
-  status?: EventStatus;
   sdgGoalId?: string;
   activityType?: string;
   search?: string;
@@ -165,7 +149,6 @@ export interface UnitDTO {
   id: string;
   code: string;
   name: string;
-  description: string | null;
   isActive: boolean;
 }
 
@@ -185,7 +168,6 @@ export interface ImportBatchDTO {
   totalRows: number;
   successRows: number;
   failedRows: number;
-  notes: string | null;
   createdAt: Date;
   uploadedBy: {
     id: string;
@@ -217,11 +199,38 @@ export interface ProgramYearMetricDTO {
   year: number;
   metricType: string;
   valueNumber: number;
-  metaJson: unknown;
-  sourceSheet: string | null;
 }
 
-// Dashboard types
+// Dashboard analytics types
+export interface DashboardAnalytics {
+  totalEvents: number;
+  totalParticipants: number;
+  totalBeneficiaries: number;
+  totalHoursEngaged: number;
+  totalAmountSpent: number;
+  latestBloodDonationTotal: number;
+  eventsByYear: { year: number; count: number }[];
+  metricsByYear: { year: number; participants: number; hours: number; amount: number }[];
+  eventsByUnit: { unitCode: string; unitName: string; count: number }[];
+  eventsByActivityType: { activityType: string; count: number }[];
+  participantsByUnit: {
+    unitCode: string;
+    unitName: string;
+    students: number;
+    faculty: number;
+    external: number;
+    total: number;
+  }[];
+  eventsBySDG: { goalNumber: number; goalName: string; count: number }[];
+  bloodDonationHistory: {
+    year: number;
+    campDonors: number;
+    regularDonors: number;
+    totalDonors: number;
+  }[];
+}
+
+// Legacy dashboard summary
 export interface DashboardSummary {
   totalEvents: number;
   totalBeneficiaries: number;

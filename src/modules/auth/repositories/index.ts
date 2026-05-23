@@ -89,13 +89,6 @@ export async function deleteAllUserSessions(userId: string): Promise<void> {
   });
 }
 
-export async function updateSessionLastUsed(id: string): Promise<void> {
-  await prisma.authSession.update({
-    where: { id },
-    data: { lastUsedAt: new Date() },
-  });
-}
-
 export async function getUserUnitIds(userId: string): Promise<string[]> {
   const accesses = await prisma.userUnitAccess.findMany({
     where: { userId },

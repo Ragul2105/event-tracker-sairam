@@ -27,9 +27,8 @@ export async function upsertBloodDonationMetric(data: {
   campDonors: number;
   regularDonors: number;
   totalDonors: number;
-  sourceSheet?: string;
 }) {
-  const { unitId, year, campDonors, regularDonors, totalDonors, sourceSheet } = data;
+  const { unitId, year, campDonors, regularDonors, totalDonors } = data;
   
   // Upsert all three metrics
   await Promise.all([
@@ -42,11 +41,9 @@ export async function upsertBloodDonationMetric(data: {
         year,
         metricType: "CAMP_DONORS",
         valueNumber: new Prisma.Decimal(campDonors),
-        sourceSheet,
       },
       update: {
         valueNumber: new Prisma.Decimal(campDonors),
-        sourceSheet,
       },
     }),
     prisma.programYearMetric.upsert({
@@ -58,11 +55,9 @@ export async function upsertBloodDonationMetric(data: {
         year,
         metricType: "REGULAR_DONORS",
         valueNumber: new Prisma.Decimal(regularDonors),
-        sourceSheet,
       },
       update: {
         valueNumber: new Prisma.Decimal(regularDonors),
-        sourceSheet,
       },
     }),
     prisma.programYearMetric.upsert({
@@ -74,11 +69,9 @@ export async function upsertBloodDonationMetric(data: {
         year,
         metricType: "TOTAL_DONORS",
         valueNumber: new Prisma.Decimal(totalDonors),
-        sourceSheet,
       },
       update: {
         valueNumber: new Prisma.Decimal(totalDonors),
-        sourceSheet,
       },
     }),
   ]);

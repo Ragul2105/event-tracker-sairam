@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/shared/AuthProvider";
 import {
   Card,
@@ -11,7 +12,7 @@ import {
   Alert,
   ProgressBar,
 } from "@/components/ui";
-import { Download, Upload, Search, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronDown, ChevronUp, LayoutGrid, AlignJustify } from "lucide-react";
+import { Download, Upload, Search, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronDown, ChevronUp, LayoutGrid, AlignJustify, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 interface Event {
@@ -33,7 +34,6 @@ interface Event {
   locationText: string | null;
   reportUrl: string | null;
   socialUrl: string | null;
-  status: string;
   goals: Array<{ sdgGoal: { goalNumber: number; name: string } }>;
 }
 
@@ -55,7 +55,6 @@ export default function UBAPage() {
   const [filters, setFilters] = useState({
     year: "",
     activityType: "",
-    status: "",
     search: "",
   });
 
@@ -203,7 +202,6 @@ export default function UBAPage() {
     return events.filter(event => {
       if (filters.year && event.year?.toString() !== filters.year) return false;
       if (filters.activityType && event.activityType !== filters.activityType) return false;
-      if (filters.status && event.status !== filters.status) return false;
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         return (
@@ -264,15 +262,30 @@ export default function UBAPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const total = filteredEvents.length;
-    const published = filteredEvents.filter(e => e.status === 'PUBLISHED').length;
-    const draft = filteredEvents.filter(e => e.status === 'DRAFT').length;
-    const archived = filteredEvents.filter(e => e.status === 'ARCHIVED').length;
-    const totalStudents = filteredEvents.reduce((sum, e) => sum + e.studentCount, 0);
-    const totalFaculty = filteredEvents.reduce((sum, e) => sum + e.facultyCount, 0);
-    const totalExternal = filteredEvents.reduce((sum, e) => sum + e.externalCount, 0);
+    const toNumber = (value: unknown) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
 
-    return { total, published, draft, archived, totalStudents, totalFaculty, totalExternal };
+    const total = filteredEvents.length;
+    const totalStudents = filteredEvents.reduce((sum, e) => sum + toNumber(e.studentCount), 0);
+    const totalFaculty = filteredEvents.reduce((sum, e) => sum + toNumber(e.facultyCount), 0);
+    const totalExternal = filteredEvents.reduce((sum, e) => sum + toNumber(e.externalCount), 0);
+    const totalHoursEngaged = filteredEvents.reduce((sum, e) => sum + toNumber(e.totalHoursEngaged), 0);
+    const totalAmountSpent = filteredEvents.reduce((sum, e) => sum + toNumber(e.amountSpent), 0);
+    const avgParticipantsPerEvent = total > 0
+      ? Math.round((totalStudents + totalFaculty + totalExternal) / total)
+      : 0;
+
+    return {
+      total,
+      totalStudents,
+      totalFaculty,
+      totalExternal,
+      totalHoursEngaged,
+      totalAmountSpent,
+      avgParticipantsPerEvent,
+    };
   }, [filteredEvents]);
 
   // Get unique values for filters
@@ -499,6 +512,12 @@ export default function UBAPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold text-gray-900">UBA Events</h1>
             <div className="flex gap-2">
+              <Link href="/events/uba/new">
+                <Button variant="default" className="flex items-center gap-1.5 px-3 py-1.5 text-xs">
+                  <Plus className="h-3.5 w-3.5" />
+                  New Entry
+                </Button>
+              </Link>
               <Button onClick={handleDownloadTemplate} variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 text-xs">
                 <Download className="h-3.5 w-3.5" />
                 Download Template
@@ -542,20 +561,6 @@ export default function UBAPage() {
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-700">Status:</label>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
-                  className="w-32 text-xs px-2 py-1"
-                >
-                  <option value="">All Status</option>
-                  <option value="PUBLISHED">Published</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="ARCHIVED">Archived</option>
-                </Select>
-              </div>
-
               <div className="flex-1 min-w-[250px]">
                 <Input
                   type="text"
@@ -566,9 +571,9 @@ export default function UBAPage() {
                 />
               </div>
 
-              {(filters.year || filters.activityType || filters.status || filters.search) && (
+              {(filters.year || filters.activityType || filters.search) && (
                 <Button
-                  onClick={() => setFilters({ year: '', activityType: '', status: '', search: '' })}
+                  onClick={() => setFilters({ year: '', activityType: '', search: '' })}
                   variant="outline"
                   className="px-3 py-1 text-xs"
                 >
@@ -637,20 +642,20 @@ export default function UBAPage() {
             </Card>
             <Card className="border" style={{ borderColor: '#d1d5db' }}>
               <div className="px-2 py-1.5">
-                <div className="text-lg font-bold text-green-600">{stats.published}</div>
-                <div className="text-xs text-gray-600">Published</div>
+                <div className="text-lg font-bold text-cyan-600">{Math.round(stats.totalHoursEngaged).toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Engaged Hours</div>
               </div>
             </Card>
             <Card className="border" style={{ borderColor: '#d1d5db' }}>
               <div className="px-2 py-1.5">
-                <div className="text-lg font-bold text-gray-600">{stats.draft}</div>
-                <div className="text-xs text-gray-600">Draft</div>
+                <div className="text-lg font-bold text-emerald-600">₹{Math.round(stats.totalAmountSpent).toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Amount Spent</div>
               </div>
             </Card>
             <Card className="border" style={{ borderColor: '#d1d5db' }}>
               <div className="px-2 py-1.5">
-                <div className="text-lg font-bold text-orange-600">{stats.archived}</div>
-                <div className="text-xs text-gray-600">Archived</div>
+                <div className="text-lg font-bold text-rose-600">{stats.avgParticipantsPerEvent.toLocaleString()}</div>
+                <div className="text-xs text-gray-600">Avg Participants/Event</div>
               </div>
             </Card>
             <Card className="border" style={{ borderColor: '#d1d5db' }}>
