@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { 
-  LayoutDashboard, 
-  Calendar, 
   Users, 
   Settings, 
   LogOut,
@@ -16,17 +14,14 @@ import {
   ChevronLeft,
   Home,
   FolderOpen,
-  Wallet,
-  CreditCard,
-  BarChart3,
-  User
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface NavItem {
   href: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   roles: string[];
   submenu?: { href: string; label: string; }[];
 }
@@ -39,7 +34,6 @@ const navItems: NavItem[] = [
     icon: FolderOpen, 
     roles: ["ADMIN", "MASTER", "UNIT_USER"],
     submenu: [
-      { href: "/events", label: "All Events" },
       { href: "/events/innovation-ecosystem", label: "Innovation Ecosystem" },
       { href: "/events/nss", label: "NSS" },
       { href: "/events/uba", label: "UBA" },
@@ -48,12 +42,12 @@ const navItems: NavItem[] = [
       { href: "/events/blood-donation", label: "Blood Donation" },
     ]
   },
-  { href: "/admin/users", label: "Users", icon: Users, roles: ["ADMIN"] },
-  { href: "/admin/masters", label: "Masters", icon: Settings, roles: ["ADMIN"] },
+  { href: "/admin", label: "Admin", icon: Users, roles: ["ADMIN"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(["Events"]); // Events expanded by default
@@ -86,6 +80,14 @@ export function Sidebar() {
         ? prev.filter(item => item !== label)
         : [...prev, label]
     );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      setMobileOpen(false);
+    }
   };
 
   const isActive = (href: string) => {
@@ -139,7 +141,17 @@ export function Sidebar() {
                   {item.submenu ? (
                     <>
                       <button
-                        onClick={() => !isCollapsed && toggleSubmenu(item.label)}
+                        onClick={() => {
+                          if (isCollapsed) {
+                            const first = item.submenu?.[0];
+                            if (first) {
+                              router.push(first.href);
+                              setMobileOpen(false);
+                            }
+                            return;
+                          }
+                          toggleSubmenu(item.label);
+                        }}
                         className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2.5 px-3 py-2 rounded-lg transition-all text-sm
                           ${itemActive 
                             ? 'bg-blue-500 text-white shadow-sm font-medium' 
@@ -215,6 +227,16 @@ export function Sidebar() {
                 {isCollapsed ? <ChevronRight size={16} className="text-gray-600" /> : <ChevronLeft size={16} className="text-gray-600" />}
               </button>
             </div>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg transition-all text-sm text-gray-700 hover:bg-gray-100`}
+              title={isCollapsed ? "Logout" : undefined}
+            >
+              <LogOut size={18} strokeWidth={1.5} />
+              {!isCollapsed && <span>Logout</span>}
+            </button>
           </div>
         </div>
       </aside>

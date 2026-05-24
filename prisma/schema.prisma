@@ -87,6 +87,7 @@ model SDGGoal {
 model Event {
   id                String      @id @default(cuid())
   eventCode         String      @unique
+  status            EventStatus @default(PENDING)
   title             String
   description       String?
   unitId            String
@@ -206,6 +207,12 @@ enum UserRole {
   ADMIN
   MASTER
   UNIT_USER
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ImportStatus {

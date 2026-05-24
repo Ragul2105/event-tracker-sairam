@@ -89,7 +89,15 @@ button, a, input, select, textarea {
 /* Custom Scrollbar (Webkit) */
 ::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
+  height: 10px;
+}
+
+::-webkit-scrollbar:vertical {
+  width: 6px;
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -107,7 +115,11 @@ button, a, input, select, textarea {
 
 /* Thin Scrollbar for Table Cells */
 .cell-scroll::-webkit-scrollbar {
-  height: 4px;
+  height: 8px;
+}
+
+.cell-scroll::-webkit-scrollbar:horizontal {
+  height: 8px;
 }
 
 .cell-scroll::-webkit-scrollbar-track {

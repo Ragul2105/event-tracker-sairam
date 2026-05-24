@@ -4,24 +4,27 @@ import { EventFiltersInput } from "../validators";
 
 export interface CreateEventData {
   eventCode: string;
+  status?: Prisma.EventStatus;
   title: string;
-  description?: string;
+  description?: string | null;
   unitId: string;
-  eventDate?: Date;
-  year?: number;
-  activityType?: string;
+  eventDate?: Date | null;
+  eventDateTo?: Date | null;
+  year?: number | null;
+  activityType?: string | null;
   studentCount?: number;
   facultyCount?: number;
   externalCount?: number;
   totalParticipants?: number;
-  beneficiaryText?: string;
-  beneficiaryCount?: number;
-  hoursPerEvent?: number;
-  totalHoursEngaged?: number;
-  amountSpent?: number;
-  locationText?: string;
-  reportUrl?: string;
-  socialUrl?: string;
+  beneficiaryText?: string | null;
+  beneficiaryCount?: number | null;
+  hoursPerEvent?: number | null;
+  totalHoursEngaged?: number | null;
+  amountSpent?: number | null;
+  locationText?: string | null;
+  subUnitName?: string | null;
+  reportUrl?: string | null;
+  socialUrl?: string | null;
   sourceSheet?: string;
   sourceRowNumber?: number;
   createdById: string;
@@ -80,6 +83,8 @@ export async function findEvents(
       { eventCode: { contains: filters.search, mode: "insensitive" } },
     ];
   }
+
+  where.status = filters.status ?? "APPROVED";
   
   const orderBy: Prisma.EventOrderByWithRelationInput = {
     [filters.sortBy]: filters.sortOrder,
@@ -110,9 +115,21 @@ export async function createEvent(data: CreateEventData) {
   return prisma.event.create({
     data: {
       ...data,
-      hoursPerEvent: data.hoursPerEvent ? new Prisma.Decimal(data.hoursPerEvent) : undefined,
-      totalHoursEngaged: data.totalHoursEngaged ? new Prisma.Decimal(data.totalHoursEngaged) : undefined,
-      amountSpent: data.amountSpent ? new Prisma.Decimal(data.amountSpent) : undefined,
+      hoursPerEvent: data.hoursPerEvent !== undefined && data.hoursPerEvent !== null
+        ? new Prisma.Decimal(data.hoursPerEvent)
+        : data.hoursPerEvent === null
+          ? null
+          : undefined,
+      totalHoursEngaged: data.totalHoursEngaged !== undefined && data.totalHoursEngaged !== null
+        ? new Prisma.Decimal(data.totalHoursEngaged)
+        : data.totalHoursEngaged === null
+          ? null
+          : undefined,
+      amountSpent: data.amountSpent !== undefined && data.amountSpent !== null
+        ? new Prisma.Decimal(data.amountSpent)
+        : data.amountSpent === null
+          ? null
+          : undefined,
     },
     include: eventWithRelations,
   });
@@ -125,13 +142,19 @@ export async function updateEvent(
   const updateData: Prisma.EventUpdateInput = { ...data };
   
   if (data.hoursPerEvent !== undefined) {
-    updateData.hoursPerEvent = data.hoursPerEvent ? new Prisma.Decimal(data.hoursPerEvent) : null;
+    updateData.hoursPerEvent = data.hoursPerEvent === null
+      ? null
+      : new Prisma.Decimal(data.hoursPerEvent);
   }
   if (data.totalHoursEngaged !== undefined) {
-    updateData.totalHoursEngaged = data.totalHoursEngaged ? new Prisma.Decimal(data.totalHoursEngaged) : null;
+    updateData.totalHoursEngaged = data.totalHoursEngaged === null
+      ? null
+      : new Prisma.Decimal(data.totalHoursEngaged);
   }
   if (data.amountSpent !== undefined) {
-    updateData.amountSpent = data.amountSpent ? new Prisma.Decimal(data.amountSpent) : null;
+    updateData.amountSpent = data.amountSpent === null
+      ? null
+      : new Prisma.Decimal(data.amountSpent);
   }
   
   return prisma.event.update({
@@ -194,8 +217,8 @@ export async function setEventGoals(
 
 export async function getEventStats(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = unitIds?.length
-    ? { unitId: { in: unitIds } }
-    : {};
+    ? { unitId: { in: unitIds }, status: "APPROVED" }
+    : { status: "APPROVED" };
   
   const [totalEvents, aggregates] = await Promise.all([
     prisma.event.count({ where }),
@@ -219,8 +242,8 @@ export async function getEventStats(unitIds?: string[]) {
 
 export async function getEventsByUnit(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = unitIds?.length
-    ? { unitId: { in: unitIds } }
-    : {};
+    ? { unitId: { in: unitIds }, status: "APPROVED" }
+    : { status: "APPROVED" };
   
   return prisma.event.groupBy({
     by: ["unitId"],
@@ -231,8 +254,8 @@ export async function getEventsByUnit(unitIds?: string[]) {
 
 export async function getEventsByYear(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = unitIds?.length
-    ? { unitId: { in: unitIds } }
-    : {};
+    ? { unitId: { in: unitIds }, status: "APPROVED" }
+    : { status: "APPROVED" };
   
   return prisma.event.groupBy({
     by: ["year"],
@@ -245,6 +268,7 @@ export async function getEventsByYear(unitIds?: string[]) {
 export async function getEventsByActivityType(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = {
     ...(unitIds?.length ? { unitId: { in: unitIds } } : {}),
+    status: "APPROVED",
     activityType: { not: null },
   };
 
@@ -258,8 +282,8 @@ export async function getEventsByActivityType(unitIds?: string[]) {
 
 export async function getParticipantsByUnit(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = unitIds?.length
-    ? { unitId: { in: unitIds } }
-    : {};
+    ? { unitId: { in: unitIds }, status: "APPROVED" }
+    : { status: "APPROVED" };
 
   return prisma.event.groupBy({
     by: ["unitId"],
@@ -276,6 +300,7 @@ export async function getParticipantsByUnit(unitIds?: string[]) {
 export async function getMetricsByYear(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = {
     ...(unitIds?.length ? { unitId: { in: unitIds } } : {}),
+    status: "APPROVED",
     year: { not: null },
   };
 
@@ -293,8 +318,8 @@ export async function getMetricsByYear(unitIds?: string[]) {
 
 export async function getAmountByUnit(unitIds?: string[]) {
   const where: Prisma.EventWhereInput = unitIds?.length
-    ? { unitId: { in: unitIds } }
-    : {};
+    ? { unitId: { in: unitIds }, status: "APPROVED" }
+    : { status: "APPROVED" };
 
   return prisma.event.groupBy({
     by: ["unitId"],

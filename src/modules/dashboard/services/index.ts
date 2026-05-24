@@ -21,7 +21,11 @@ export async function getDashboardAnalytics(unitIds?: string[]): Promise<Dashboa
     eventRepo.getEventStats(unitIds),
     eventRepo.getEventsByUnit(unitIds),
     eventRepo.getEventsByYear(unitIds),
-    prisma.eventGoal.groupBy({ by: ["sdgGoalId"], _count: { id: true } }),
+    prisma.eventGoal.groupBy({
+      by: ["sdgGoalId"],
+      where: { event: { status: "APPROVED" } },
+      _count: { id: true },
+    }),
     eventRepo.getEventsByActivityType(unitIds),
     eventRepo.getParticipantsByUnit(unitIds),
     eventRepo.getMetricsByYear(unitIds),
@@ -81,7 +85,9 @@ export async function getDashboardAnalytics(unitIds?: string[]): Promise<Dashboa
     totalBeneficiaries: stats.totalBeneficiaries,
     totalHoursEngaged: stats.totalHoursEngaged,
     totalAmountSpent: (await prisma.event.aggregate({
-      where: unitIds?.length ? { unitId: { in: unitIds } } : {},
+      where: unitIds?.length
+        ? { unitId: { in: unitIds }, status: "APPROVED" }
+        : { status: "APPROVED" },
       _sum: { amountSpent: true },
     }))._sum.amountSpent?.toNumber() || 0,
     latestBloodDonationTotal: latestBloodDonation?.totalDonors || 0,
@@ -132,6 +138,7 @@ export async function getDashboardSummary(unitIds?: string[]): Promise<Dashboard
   // Get events by SDG goal
   const eventsBySDGRaw = await prisma.eventGoal.groupBy({
     by: ["sdgGoalId"],
+    where: { event: { status: "APPROVED" } },
     _count: { id: true },
   });
   

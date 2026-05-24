@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       sdgGoalId: searchParams.get("sdgGoalId") ?? undefined,
       activityType: searchParams.get("activityType") ?? undefined,
       search: searchParams.get("search") ?? undefined,
+      status: searchParams.get("status") ?? undefined,
       sortBy: searchParams.get("sortBy") ?? undefined,
       sortOrder: searchParams.get("sortOrder") ?? undefined,
     });

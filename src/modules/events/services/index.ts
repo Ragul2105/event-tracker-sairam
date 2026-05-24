@@ -7,6 +7,23 @@ import { UserRole } from "@prisma/client";
 
 const logger = createLogger("events-service");
 
+function normalizeNullableString(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function normalizeNullableDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  if (value.trim() === "") return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export async function listEvents(
   filters: EventFiltersInput,
   userRole: UserRole,
@@ -61,27 +78,38 @@ export async function createEvent(
   
   const year = input.year || new Date().getFullYear();
   const eventCode = await eventRepo.getNextEventCode(unit.code, year);
+
+  const studentCount = input.studentCount || 0;
+  const facultyCount = input.facultyCount || 0;
+  const externalCount = input.externalCount || 0;
+  const totalParticipants =
+    input.totalParticipants !== undefined
+      ? input.totalParticipants
+      : studentCount + facultyCount + externalCount;
   
   const event = await eventRepo.createEvent({
     eventCode,
+    status: "PENDING",
     title: input.title,
-    description: input.description,
+    description: normalizeNullableString(input.description) ?? input.description ?? null,
     unitId: input.unitId,
-    eventDate: input.eventDate ? new Date(input.eventDate) : undefined,
+    eventDate: normalizeNullableDate(input.eventDate),
+    eventDateTo: normalizeNullableDate(input.eventDateTo),
     year,
-    activityType: input.activityType,
-    studentCount: input.studentCount || 0,
-    facultyCount: input.facultyCount || 0,
-    externalCount: input.externalCount || 0,
-    totalParticipants: input.totalParticipants || 0,
-    beneficiaryText: input.beneficiaryText,
-    beneficiaryCount: input.beneficiaryCount,
-    hoursPerEvent: input.hoursPerEvent,
-    totalHoursEngaged: input.totalHoursEngaged,
-    amountSpent: input.amountSpent,
-    locationText: input.locationText,
-    reportUrl: input.reportUrl || undefined,
-    socialUrl: input.socialUrl || undefined,
+    activityType: normalizeNullableString(input.activityType) ?? input.activityType ?? null,
+    studentCount,
+    facultyCount,
+    externalCount,
+    totalParticipants,
+    beneficiaryText: normalizeNullableString(input.beneficiaryText) ?? input.beneficiaryText ?? null,
+    beneficiaryCount: input.beneficiaryCount ?? null,
+    hoursPerEvent: input.hoursPerEvent ?? null,
+    totalHoursEngaged: input.totalHoursEngaged ?? null,
+    amountSpent: input.amountSpent ?? null,
+    locationText: normalizeNullableString(input.locationText) ?? input.locationText ?? null,
+    subUnitName: normalizeNullableString(input.subUnitName) ?? input.subUnitName ?? null,
+    reportUrl: input.reportUrl === "" ? null : (input.reportUrl ?? null),
+    socialUrl: input.socialUrl === "" ? null : (input.socialUrl ?? null),
     createdById: userId,
   });
   
@@ -118,32 +146,44 @@ export async function updateEvent(
       throw new AuthorizationError("You cannot change the unit of this event");
     }
   }
+
+  if (input.status && userRole !== "ADMIN") {
+    throw new AuthorizationError("Only admins can approve or reject events");
+  }
   
   const event = await eventRepo.updateEvent(id, {
     title: input.title,
-    description: input.description,
+    description: normalizeNullableString(input.description),
     unitId: input.unitId,
-    eventDate: input.eventDate ? new Date(input.eventDate) : undefined,
+    eventDate: normalizeNullableDate(input.eventDate),
+    eventDateTo: normalizeNullableDate(input.eventDateTo),
     year: input.year,
-    activityType: input.activityType,
+    activityType: normalizeNullableString(input.activityType),
+    status: input.status,
     studentCount: input.studentCount,
     facultyCount: input.facultyCount,
     externalCount: input.externalCount,
-    totalParticipants: input.totalParticipants,
-    beneficiaryText: input.beneficiaryText,
+    totalParticipants:
+      input.totalParticipants !== undefined
+        ? input.totalParticipants
+        : (input.studentCount !== undefined || input.facultyCount !== undefined || input.externalCount !== undefined)
+          ? (input.studentCount ?? existing.studentCount) + (input.facultyCount ?? existing.facultyCount) + (input.externalCount ?? existing.externalCount)
+          : undefined,
+    beneficiaryText: normalizeNullableString(input.beneficiaryText),
     beneficiaryCount: input.beneficiaryCount,
     hoursPerEvent: input.hoursPerEvent,
     totalHoursEngaged: input.totalHoursEngaged,
     amountSpent: input.amountSpent,
-    locationText: input.locationText,
-    reportUrl: input.reportUrl || undefined,
-    socialUrl: input.socialUrl || undefined,
+    locationText: normalizeNullableString(input.locationText),
+    subUnitName: normalizeNullableString(input.subUnitName),
+    reportUrl: input.reportUrl === "" || input.reportUrl === null ? null : input.reportUrl,
+    socialUrl: input.socialUrl === "" || input.socialUrl === null ? null : input.socialUrl,
     updatedById: userId,
   });
   
   // Update SDG goals if provided
   if (input.sdgGoalIds !== undefined) {
-    await eventRepo.setEventGoals(event.id, input.sdgGoalIds || [], input.primarySdgGoalId);
+    await eventRepo.setEventGoals(event.id, input.sdgGoalIds || [], input.primarySdgGoalId ?? undefined);
   }
   
   logger.info("Event updated", { eventId: event.id });
