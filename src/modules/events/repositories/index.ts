@@ -1,10 +1,10 @@
 import prisma from "@/lib/prisma/client";
-import { Prisma } from "@prisma/client";
+import { EventStatus, Prisma } from "@prisma/client";
 import { EventFiltersInput } from "../validators";
 
 export interface CreateEventData {
   eventCode: string;
-  status?: Prisma.EventStatus;
+  status?: EventStatus;
   title: string;
   description?: string | null;
   unitId: string;
